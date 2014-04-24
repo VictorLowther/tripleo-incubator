@@ -76,6 +76,8 @@ def main():
         params['emulator'] = "/usr/bin/kvm"
     elif os.path.exists("/usr/bin/qemu-kvm"): # Redhat
         params['emulator'] = "/usr/bin/qemu-kvm"
+    elif os.path.exists("/usr/libexec/qemu-kvm"): # Also redhat
+        params['emulator'] = "/usr/libexec/qemu-kvm"
 
     nicparams = {
         'nicdriver': args.libvirt_nic_driver,
