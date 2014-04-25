@@ -23,6 +23,8 @@
 }
 
 [[ -d $HOME/.cache/openstack ]] && mkdir -p "$HOME/.cache/openstack"
+[[ -d $HOME/.cache/tripleo-docker ]] && mkdir -p "$HOME/.cache/tripleo-docker/yum"
+
 
 # If we are not running inside of Docker, put ourselves in a container.
 if [[ ! -x /.dockerinit ]]; then
@@ -52,6 +54,7 @@ if [[ ! -x /.dockerinit ]]; then
 
     docker_args=(-t -i -w /opt/openstack/tripleo-incubator -v "$mountdir:/opt/openstack")
     docker_args+=(-v "$HOME/.cache/openstack:/home/openstack/.cache")
+    docker_args+=(-v "$HOME/.cache/tripleo-docker/yum:/var/cache/yum")
     docker_args+=(-e "OUTER_UID=$(id -u)")
     docker_args+=(-e "OUTER_GID=$(id -g)")
     [[ -f $HOME/.ssh/id_rsa.pub ]] && docker_args+=(-e "SSH_PUBKEY=$(cat "$HOME/.ssh/id_rsa.pub")")
@@ -108,7 +111,7 @@ printf "%s\n" "$SSH_PUBKEY" >> /root/.ssh/authorized_keys
 
 yum -y install sudo
 sed -i -e '/^Defaults.*(requiretty|visiblepw)/ s/^.*$//' /etc/sudoers
-echo 'Defaults   env_keep += "TRIPLEO_OS_DISTRO TRIPLEO_ROOT"' >/etc/sudoers.d/wheel
+echo 'Defaults   env_keep += "TRIPLEO_OS_DISTRO TRIPLEO_ROOT http_proxy https_proxy no_proxy"' >/etc/sudoers.d/wheel
 echo '%wheel	ALL=(ALL)	NOPASSWD: ALL' >>/etc/sudoers.d/wheel
 
 sudo -E -H -u openstack /bin/bash <<EOF
