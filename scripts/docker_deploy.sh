@@ -90,7 +90,7 @@ esac
 shift
 export LANG=en_US.UTF-8
 if grep -q openstack /etc/passwd; then
-    find /var /home  -user openstack -exec chown "$OUTER_UID" '{}' ';'
+    find /var /home -xdev -user openstack -exec chown "$OUTER_UID" '{}' ';'
     usermod -o -u "$OUTER_UID" openstack
 else
     useradd -o -U -u "$OUTER_UID" \
@@ -99,7 +99,7 @@ else
         openstack
 fi
 if grep -q openstack /etc/group; then
-    find /var /home -group openstack -exec chown "$OUTER_UID:$OUTER_GID" '{}' ';'
+    find /var /home -xdev -group openstack -exec chown "$OUTER_UID:$OUTER_GID" '{}' ';'
     groupmod -o -g "$OUTER_GID" openstack
     usermod -g "$OUTER_GID" openstack
     usermod -a -G wheel openstack
@@ -109,13 +109,33 @@ chown -R openstack:openstack /home/openstack
 mkdir -p /root/.ssh
 printf "%s\n" "$SSH_PUBKEY" >> /root/.ssh/authorized_keys
 
-yum -y install sudo
+if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
+    # This will need to be updated as the EPEL release changes.
+    yum -y localinstall \
+        http://mirrors.servercentral.net/fedora/epel/6/i386/epel-release-6-8.noarch.rpm || {
+        echo Cannot automatically install the EPEL repository.
+        echo See http://fedoraproject.org/wiki/EPEL for manual installation instructions.
+        exit 1
+    }
+fi
+
+# Disable using mirrors
+( cd /etc/yum.repos.d; sed -i -e '/^#baseurl/ s/\#//' -e '/^mirrorlist/ s/^mirror/#mirror/' *.repo)
+
+yum -y install sudo tmux openssh openssh-server
 sed -i -e '/^Defaults.*(requiretty|visiblepw)/ s/^.*$//' /etc/sudoers
 echo 'Defaults   env_keep += "TRIPLEO_OS_DISTRO TRIPLEO_ROOT http_proxy https_proxy no_proxy"' >/etc/sudoers.d/wheel
 echo '%wheel	ALL=(ALL)	NOPASSWD: ALL' >>/etc/sudoers.d/wheel
+/etc/init.d/sshd start
 
-sudo -E -H -u openstack /bin/bash <<EOF
+cat >/root/devstack.sh <<EOL
+sudo -E -H -u openstack /bin/bash <<'EOF'
 . /etc/profile
 "$TRIPLEO_ROOT/tripleo-incubator/scripts/devtest.sh" --trash-my-machine "$@"
+/bin/bash -i
 EOF
-sudo -E -H -u openstack -i
+EOL
+
+chmod 755 /root/devstack.sh
+
+tmux new-session /root/devstack.sh
