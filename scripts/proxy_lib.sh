@@ -2,6 +2,8 @@
 
 # This mangles proxies into shape for docker and KVM admin nodes.
 declare -A mangled_proxies
+export MANGLED_PROXIES=false
+export LOCAL_SQUID=false
 
 # Rewrite any proxies that refer to localhost to
 # refer to $1 instead.
@@ -30,7 +32,9 @@ mangle_proxies() {
     # This will fail badly if the proxy does not accept
     # requests for addresses in Docker's range.'
     case $raw_proxy in
-        127.0.0.1|[::]|localhost) raw_proxy="$bridge_ip";;
+        127.0.0.1|[::]|localhost) 
+            MANGLED_PROXIES=true raw_proxy="$bridge_ip"
+            pgrep squid &>/dev/null && export LOCAL_SQUID=true;;
     esac
     local base_proxy="http://"
     if [[ $proxy_user ]]; then

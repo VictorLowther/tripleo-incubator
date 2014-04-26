@@ -71,6 +71,7 @@ if [[ ! -x /.dockerinit ]]; then
     # Make sure the container knows about our proxies, if applicable.
     . "$mountdir/tripleo-incubator/scripts/proxy_lib.sh"
     mangle_proxies "$bridge_ip"
+    docker_args+=(-e "MANGLED_PROXIES=$MANGLED_PROXIES" -e "LOCAL_SQUID=$LOCAL_SQUID")
     for proxy in "${!mangled_proxies[@]}"; do
         docker_args+=(-e "$proxy=${mangled_proxies[$proxy]}")
     done
@@ -119,23 +120,22 @@ if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
     }
 fi
 
-# Disable using mirrors
-( cd /etc/yum.repos.d; sed -i -e '/^#baseurl/ s/\#//' -e '/^mirrorlist/ s/^mirror/#mirror/' *.repo)
+# Disable using mirrors if we know we have a local squid.
+[[ $LOCAL_SQUID = true ]] && \
+    (cd /etc/yum.repos.d
+     echo "Mangling repositories for local squid."
+     sed -i -e '/^#baseurl/ s/\#//' -e '/^mirrorlist/ s/^mirror/#mirror/' *.repo)
 
 yum -y install sudo tmux openssh openssh-server
 sed -i -e '/^Defaults.*(requiretty|visiblepw)/ s/^.*$//' /etc/sudoers
-echo 'Defaults   env_keep += "TRIPLEO_OS_DISTRO TRIPLEO_ROOT http_proxy https_proxy no_proxy"' >/etc/sudoers.d/wheel
+echo 'Defaults   env_keep += "TRIPLEO_OS_DISTRO TRIPLEO_ROOT http_proxy https_proxy no_proxy LOCAL_SQUID MANGLED_PROXIES"' >/etc/sudoers.d/wheel
 echo '%wheel	ALL=(ALL)	NOPASSWD: ALL' >>/etc/sudoers.d/wheel
 /etc/init.d/sshd start
 
-cat >/root/devstack.sh <<EOL
-sudo -E -H -u openstack /bin/bash <<'EOF'
 . /etc/profile
-"$TRIPLEO_ROOT/tripleo-incubator/scripts/devtest.sh" --trash-my-machine "$@"
-/bin/bash -i
-EOF
-EOL
-
-chmod 755 /root/devstack.sh
-
-tmux new-session /root/devstack.sh
+tmux new-session -s control -n rootshell -d '/bin/bash -i'
+tmux set-option set-remain-on-exit on
+tmux new-window -n control:usershell -d 'sudo -E -H -u openstack -i'
+tmux new-window -n control:devtest \
+    "sudo -E -H -u openstack -- '$TRIPLEO_ROOT/tripleo-incubator/scripts/devtest.sh' --trash-my-machine $@"
+tmux attach
