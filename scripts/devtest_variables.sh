@@ -59,6 +59,8 @@ if [[ ! -d $TRIPLEO_ROOT/tripleo-incubator/scripts ]]; then
 fi
 ### --include
 export PATH=$TRIPLEO_ROOT/tripleo-incubator/scripts:$PATH
+export PIP_DOWNLOAD_CACHE="${PIP_DOWNLOAD_CACHE:-~/.cache/pip-cache}"
+mkdir -p "$PIP_DOWNLOAD_CACHE"
 
 ## #. It's posible to deploy the Undercloud without a UI and its dependent elements.
 ##    The dependent image elements in Undercloud are Horizon, Tuskar-UI (not included
