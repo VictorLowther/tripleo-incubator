@@ -59,6 +59,8 @@ if [[ ! -d $TRIPLEO_ROOT/tripleo-incubator/scripts ]]; then
 fi
 ### --include
 export PATH=$TRIPLEO_ROOT/tripleo-incubator/scripts:$PATH
+export PIP_DOWNLOAD_CACHE="${PIP_DOWNLOAD_CACHE:-~/.cache/pip-cache}"
+mkdir -p "$PIP_DOWNLOAD_CACHE"
 
 ## #. We now support Ironic as the baremetal deployment layer. To use it just
 ##    set ``USE_IRONIC=1``. The default is still Nova Baremetal until we've had some
