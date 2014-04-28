@@ -15,7 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-set -ex
+set -e
 
 SCRIPT_NAME=$(basename $0)
 SCRIPT_HOME=$(dirname $0)
