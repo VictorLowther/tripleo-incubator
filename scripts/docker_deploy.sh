@@ -69,8 +69,8 @@ if [[ ! -x /.dockerinit ]]; then
     [[ $(ip -o -4 addr show dev $bridge) =~ $bridge_addr_re ]] && \
         bridge_ip="${BASH_REMATCH[1]}"
     # Make sure the container knows about our proxies, if applicable.
-    . "$mountdir/tripleo-incubator/scripts/proxy_lib.sh"
-    mangle_proxies "$bridge_ip"
+    #. "$mountdir/tripleo-incubator/scripts/proxy_lib.sh"
+    #mangle_proxies "$bridge_ip"
     docker_args+=(-e "MANGLED_PROXIES=$MANGLED_PROXIES" -e "LOCAL_SQUID=$LOCAL_SQUID")
     for proxy in "${!mangled_proxies[@]}"; do
         docker_args+=(-e "$proxy=${mangled_proxies[$proxy]}")
